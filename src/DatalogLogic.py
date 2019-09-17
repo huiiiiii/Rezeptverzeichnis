@@ -1,6 +1,5 @@
 from pyDatalog import pyDatalog
 import mysql.connector
-from flask import jsonify
 
 @pyDatalog.program()
 def init_datalog():
