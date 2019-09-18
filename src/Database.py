@@ -31,9 +31,9 @@ except:
     mycursor = mydb.cursor()
     mycursor.execute("CREATE DATABASE recipeDatabase")
 
-mycursor.execute("SHOW DATABASES")
-for x in mycursor:
-    print(x)
+#mycursor.execute("SHOW DATABASES")
+#for x in mycursor:
+#    print(x)
 
 # delete old tables
 mycursor.execute("DROP TABLE IF EXISTS `enthaeltLebensmittel`")
