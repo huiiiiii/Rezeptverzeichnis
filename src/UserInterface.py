@@ -1,5 +1,7 @@
 import sys
-
+import os
+sys.path.append(os.pardir)
+sys.path.append(os.path.join(os.pardir, os.pardir))
 from src.DatalogLogic import getRecipesOrIngredients, getRecipeDetails, isValidId, addRecipe
 
 shouldExit = False
