@@ -15,8 +15,9 @@ def printAllIngredients():
 
 def printRecipe(id):
     if isValidId(id) == None:
-        print("This is no valid ID")
-    print(getRecipeDetails(id))
+        print("Dies ist keine mögliche RezeptID.")
+    else:
+        print(getRecipeDetails(id))
 
 
 print("Willkommen im Rezeptverzeichnis.")
@@ -28,7 +29,7 @@ while not shouldExit:
         sys.exit(0)
     printRecipeList("glutenfrei" in i, "lactosefrei" in i, "vegan" in i, "vegetarisch" in i, "kalorienarm" in i)
 
-    rezeptAnzeigen = input("\nSoll ein Rezept angezeigt weden (ja / nein) ?")
+    rezeptAnzeigen = input("\nSoll ein Rezept angezeigt weden (ja / nein)? ")
     if "exit" in rezeptAnzeigen:
         shouldExit = True
         sys.exit(0)
@@ -40,7 +41,7 @@ while not shouldExit:
             shouldExit = True
             sys.exit(0)
 
-    rezeptAnlegen = input("\nSoll ein Rezept neu angelegt werden (ja / nein) ? ")
+    rezeptAnlegen = input("\nSoll ein Rezept neu angelegt werden (ja / nein)? ")
     if "exit" in rezeptAnlegen:
         shouldExit = True
         sys.exit(0)
@@ -48,15 +49,15 @@ while not shouldExit:
         name = input("\nBitte geben Sie den Namen des Rezepts ein: ")
         ingredients = []
         printAllIngredients()
-        zutatHinzufuegen = input("\nSoll eine Zutat hinzugefuegt werden (ja / nein) ? ")
+        zutatHinzufuegen = input("\nSoll eine Zutat hinzugefuegt werden (ja / nein)? ")
         while "ja" in zutatHinzufuegen:
             zutatId = input("\nBitte geben Sie die id der Zutat ein (z.B. ingredient1): ")
             if isValidId(zutatId):
                 zutatMenge = float(input("\nBitte geben Sie die Menge der Zutat in Gramm ein (z.B. 40): "))
                 ingredients.append((zutatId, zutatMenge))
             else:
-                print(zutatId + " + ist keine mögliche ID")
-            zutatHinzufuegen = input("\nSoll eine Zutat hinzugefuegt werden (ja / nein) ? ")
+                print(zutatId + " ist keine mögliche ID")
+            zutatHinzufuegen = input("\nSoll eine Zutat hinzugefuegt werden (ja / nein)? ")
         instructions = input("\nBitte geben Sie eine Anleitung für das Rezept ein: ")
         id = addRecipe(name, ingredients, instructions)
         print("\nRezept wurde gespeichert: ")

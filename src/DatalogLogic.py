@@ -27,7 +27,9 @@ def init_datalog():
     # create all Datalog terms
     pyDatalog.create_terms('hasCaloriesPer100g, containsGluten, containsLactose, containsMeat, containsAnimalProduct, hasID')
     pyDatalog.create_terms('recipeInstructions')
-    pyDatalog.create_terms('containsIngredient, weightPerServing')
+    pyDatalog.create_terms('containsIngredient, weightPerServing, containsBaseIngredient')
+    pyDatalog.create_terms('A, B, C, D, X, Y, Z, I')
+    pyDatalog.create_terms('baseIngredientWithCalories')
 
     # create facts for ingredient
     mycursor.execute("SELECT * FROM `Lebensmittel`")
@@ -72,13 +74,11 @@ def init_datalog():
         pyDatalog.assert_fact('weightPerServing', x[1], weight)
 
     # resolve all ingredients from a recipe
-    pyDatalog.create_terms('A, B, C, D, X, Y, Z, I, containsBaseIngredient')
     containsBaseIngredient(X, Y, Z) <= containsIngredient(X, Y, Z) & recipeInstructions(X, A) & hasCaloriesPer100g(Y, B)
     containsBaseIngredient(X, Y, Z) <= containsIngredient(X, A, B) & containsIngredient(A, Y, C) & weightPerServing(A, D) & (
                 Z == C * B / D)
 
     # get calories per 100g for all recipes
-    pyDatalog.create_terms('baseIngredientWithCalories')
     baseIngredientWithCalories(X, Y, Z) <= containsBaseIngredient(X, Y, B) & hasCaloriesPer100g(Y, C) & (
                 Z == C / 100 * B)
     # hasCaloriesPer100g2(X, Y) <= baseIngredientWithCalories(X, A, B) & Y == sum(B, for_each=X))
