@@ -1,6 +1,7 @@
 from pyDatalog import pyDatalog
 import mysql.connector
 
+
 def getCaloriesPer100g(recipeName):
     calorieSum = 0
     calories = pyDatalog.ask("baseIngredientWithCalories('" + recipeName + "', X, Y)")
@@ -11,8 +12,8 @@ def getCaloriesPer100g(recipeName):
     else:
         return 0
 
-@pyDatalog.program()
-def init_datalog():
+
+def connectToDatabase():
     mydb = mysql.connector.connect(
         host="localhost",
         user="user",
@@ -22,10 +23,18 @@ def init_datalog():
     if not mydb.is_connected():
         print("There is a problem with the Database")
         raise Exception("Database Error")
-    mycursor = mydb.cursor()
+    return mydb, mydb.cursor()
+
+
+@pyDatalog.program()
+def init_datalog():
+    database = connectToDatabase()
+    mydb = database[0]
+    mycursor = database[1]
 
     # create all Datalog terms
-    pyDatalog.create_terms('hasCaloriesPer100g, containsGluten, containsLactose, containsMeat, containsAnimalProduct, hasID')
+    pyDatalog.create_terms(
+        'hasCaloriesPer100g, containsGluten, containsLactose, containsMeat, containsAnimalProduct, hasID')
     pyDatalog.create_terms('recipeInstructions')
     pyDatalog.create_terms('containsIngredient, weightPerServing, containsBaseIngredient')
     pyDatalog.create_terms('A, B, C, D, X, Y, Z, I')
@@ -75,12 +84,13 @@ def init_datalog():
 
     # resolve all ingredients from a recipe
     containsBaseIngredient(X, Y, Z) <= containsIngredient(X, Y, Z) & recipeInstructions(X, A) & hasCaloriesPer100g(Y, B)
-    containsBaseIngredient(X, Y, Z) <= containsIngredient(X, A, B) & containsIngredient(A, Y, C) & weightPerServing(A, D) & (
-                Z == C * B / D)
+    containsBaseIngredient(X, Y, Z) <= containsIngredient(X, A, B) & containsIngredient(A, Y, C) & weightPerServing(A,
+                                                                                                                    D) & (
+            Z == C * B / D)
 
     # get calories per 100g for all recipes
     baseIngredientWithCalories(X, Y, Z) <= containsBaseIngredient(X, Y, B) & hasCaloriesPer100g(Y, C) & (
-                Z == C / 100 * B)
+            Z == C / 100 * B)
     # hasCaloriesPer100g2(X, Y) <= baseIngredientWithCalories(X, A, B) & Y == sum(B, for_each=X))
     recipes = pyDatalog.ask('recipeInstructions(X, Y)')
     for r in recipes.answers:
@@ -96,12 +106,15 @@ def init_datalog():
         mycursor.close()
         mydb.close()
 
+
 def getRecipesOrIngredients(recipeOrIngredient, glutenFree, lactoseFree, vegan, vegetarian, lowCalorie):
-    query = "hasID(X,'"+ recipeOrIngredient + "', I)" + ("& ~containsGluten(X)" if glutenFree else "") + (
+    query = "hasID(X,'" + recipeOrIngredient + "', I)" + ("& ~containsGluten(X)" if glutenFree else "") + (
         "& ~containsLactose(X)" if lactoseFree else "") + ("& ~containsMeat(X)" if vegetarian else "") + (
-                "& ~containsAnimalProduct(X)" if vegan else "") + ("& hasCaloriesPer100g(X, A) & (A < 100)" if lowCalorie else "")
+                "& ~containsAnimalProduct(X)" if vegan else "") + (
+                "& hasCaloriesPer100g(X, A) & (A < 100)" if lowCalorie else "")
     recipes = pyDatalog.ask(query)
     return recipes
+
 
 def getRecipeDetails(recipeID):
     recipeInstructions = pyDatalog.ask("hasID(X, 'recipe', '" + recipeID + "') & recipeInstructions(X, Y)")
@@ -111,8 +124,42 @@ def getRecipeDetails(recipeID):
         recipeIngredientsReturnValue = recipeIngredients.answers
     return recipeInstructions.answers + recipeIngredientsReturnValue
 
+
 def isValidId(id):
     return pyDatalog.ask("hasID(X, Y, '" + id + "')")
+
+
+def addIngredient(name, calorie, glutenFree, lactoseFree, vegan, vegetarian):
+    isAlreadyDefined = pyDatalog.ask("hasID('" + name + "', 'ingredient', Z)")
+    if (not isAlreadyDefined == None):
+        print("This ingredient is already defined")
+        return isAlreadyDefined.answers[0][0]
+
+    # insert ingredient in database
+    database = connectToDatabase()
+    mydb = database[0]
+    mycursor = database[1]
+    sqlZutat = "INSERT INTO `Lebensmittel` (`Name`, `KalorienPro100g`, `Fleisch`, `Tierprodukt`, `Gluten`, `Krebstiere`, `Eier`, `Fisch`, `Erdnuesse`, `Sojabohnen`, `Milch`, `Schalenfruechte`, `Sellerie`, `Sesamsamen`, `Schwefeldioxid`, `Lupinien`, `Weichtiere`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    valZutat = [(name, calorie, 0 if vegetarian else 1, 0 if vegan else 1, 0 if glutenFree else 1, 0, 0, 0, 0, 0,
+                 0 if lactoseFree else 1, 0, 0, 0, 0, 0, 0)]
+    mycursor.executemany(sqlZutat, valZutat)
+    mydb.commit()
+    ingredientNumber = mycursor.lastrowid
+    id = "ingredient" + str(ingredientNumber)
+
+    # add ingredient to datalog
+    pyDatalog.assert_fact('hasID', name, "ingredient", id)
+    pyDatalog.assert_fact('hasCaloriesPer100g', name, calorie)
+    if not glutenFree:
+        pyDatalog.assert_fact('containsGluten', name)
+    if not lactoseFree:
+        pyDatalog.assert_fact('containsLactose', name)
+    if not vegetarian:
+        pyDatalog.assert_fact('containsMeat', name)
+    if (not vegetarian) | (not vegan):
+        pyDatalog.assert_fact('containsAnimalProduct', name)
+    pyDatalog.assert_fact('weightPerServing', name, 1)
+
 
 def addRecipe(name, ingredients, instructions):
     isAlreadyDefined = pyDatalog.ask("hasID('" + name + "', 'recipe', Z)")
@@ -121,14 +168,9 @@ def addRecipe(name, ingredients, instructions):
         return isAlreadyDefined.answers[0][0]
 
     # insert recipe in database
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="user",
-        passwd="test",
-        database="recipeDatabase"
-    )
-    mycursor = mydb.cursor()
-
+    database = connectToDatabase()
+    mydb = database[0]
+    mycursor = database[1]
     sqlRezepte = "INSERT INTO `Rezepte` (`Name`, `Anleitung`) VALUES (%s, %s)"
     valRezepte = [(name, instructions)]
     mycursor.executemany(sqlRezepte, valRezepte)
@@ -178,11 +220,11 @@ def addRecipe(name, ingredients, instructions):
         mydb.close()
     return id
 
-#print(getRecipesOrIngredients("ingredient", True, True, True, True, True))
-#print(getRecipeDetails("recipe1"))
+# print(getRecipesOrIngredients("ingredient", True, True, True, True, True))
+# print(getRecipeDetails("recipe1"))
 
-#print(addRecipe("RecipeName", [("ingredient1", 100), ("ingredient5", 20), ("recipe1", 200)], "Instruction"))
-#print(getRecipesOrIngredients("recipe", False, False, False, False, False))
-#print(getRecipeDetails("recipe4"))
-#print(pyDatalog.ask("hasCaloriesPer100g(Y, Z)"))
-#print(pyDatalog.ask("containsGluten(Y)"))
+# print(addRecipe("RecipeName", [("ingredient1", 100), ("ingredient5", 20), ("recipe1", 200)], "Instruction"))
+# print(getRecipesOrIngredients("recipe", False, False, False, False, False))
+# print(getRecipeDetails("recipe4"))
+# print(pyDatalog.ask("hasCaloriesPer100g(Y, Z)"))
+# print(pyDatalog.ask("containsGluten(Y)"))

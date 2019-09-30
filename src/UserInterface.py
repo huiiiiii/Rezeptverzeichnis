@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.pardir)
 sys.path.append(os.path.join(os.pardir, os.pardir))
-from src.DatalogLogic import getRecipesOrIngredients, getRecipeDetails, isValidId, addRecipe
+from src.DatalogLogic import getRecipesOrIngredients, getRecipeDetails, isValidId, addRecipe, addIngredient
 
 shouldExit = False
 
@@ -12,6 +12,7 @@ def printRecipeList(glutenFree, lactoseFree, vegan, vegetarian, lowCalorie):
 def printAllIngredients():
     print("\nVerfügbare Zutaten sind:")
     print(getRecipesOrIngredients("ingredient", False, False, False, False, False))
+    print(getRecipesOrIngredients("recipe", False, False, False, False, False))
 
 def printRecipe(id):
     if isValidId(id) == None:
@@ -51,10 +52,22 @@ while not shouldExit:
         printAllIngredients()
         zutatHinzufuegen = input("\nSoll eine Zutat hinzugefuegt werden (ja / nein)? ")
         while "ja" in zutatHinzufuegen:
-            zutatId = input("\nBitte geben Sie die id der Zutat ein (z.B. ingredient1): ")
+            zutatId = input("\nBitte geben Sie die id der Zutat ein (z.B. ingredient1), oder fügen Sie mit dem Befehl neu eine neue Zutat hinzu: ")
             if isValidId(zutatId):
-                zutatMenge = float(input("\nBitte geben Sie die Menge der Zutat in Gramm ein (z.B. 40): "))
-                ingredients.append((zutatId, zutatMenge))
+                try:
+                    zutatMenge = float(input("\nBitte geben Sie die Menge der Zutat in Gramm ein (z.B. 40): "))
+                    ingredients.append((zutatId, zutatMenge))
+                except ValueError:
+                    print("Zutat konnte nicht hinzugefügt werden, dies ist keine mögliche Mengenangabe.")
+            elif "neu" in zutatId:
+                nameNeueZutat = input("\nBitte geben Sie den Namen der Zutat ein: ")
+                try:
+                    kalorien = float(input("\nBitte geben Sie die Kalorienmenge der Zutat in kcal pro 100g ein: "))
+                except ValueError:
+                    kalorien = 0
+                allergene = input("\nWelche dieser Stoffe sind darin enthalten? Gluten, Lactose, Fleisch, Tierprodukt ")
+                addIngredient(nameNeueZutat, kalorien, not "Gluten" in allergene, not "Lactose" in allergene, not "Tierprodukt" in allergene, not "Fleisch" in allergene)
+                printAllIngredients()
             else:
                 print(zutatId + " ist keine mögliche ID")
             zutatHinzufuegen = input("\nSoll eine Zutat hinzugefuegt werden (ja / nein)? ")
