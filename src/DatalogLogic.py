@@ -220,7 +220,7 @@ def addRecipe(name, ingredients, instructions):
         mydb.close()
     return id
 
-# print(getRecipesOrIngredients("ingredient", True, True, True, True, True))
+# print(getRecipesOrIngredients("recipe", True, False, False, False, True))
 # print(getRecipeDetails("recipe1"))
 
 # print(addRecipe("RecipeName", [("ingredient1", 100), ("ingredient5", 20), ("recipe1", 200)], "Instruction"))
